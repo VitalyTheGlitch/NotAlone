@@ -43,7 +43,7 @@ const ConversationsWrapper = ({ session }) => {
   /**
    * Subscriptions
   **/
-  useSubscription<ConversationUpdatedData, null>(
+  useSubscription(
     ConversationOperations.Subscriptions.conversationUpdated,
     {
       onData: ({ client, data }) => {
@@ -135,7 +135,7 @@ const ConversationsWrapper = ({ session }) => {
           return;
         }
 
-        const existing = client.readQuery<MessagesData>({
+        const existing = client.readQuery({
           query: MessageOperations.Query.messages,
           variables: { conversationId: updatedConversationId }
         });

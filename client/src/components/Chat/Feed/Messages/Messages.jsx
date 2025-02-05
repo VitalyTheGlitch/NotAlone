@@ -16,7 +16,7 @@ const Messages = ({ userId, conversationId }) => {
 		}
   });
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef(null);
 
   const subscribeToMoreMessages = (conversationId) => {
 		return subscribeToMore({

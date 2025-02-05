@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import { PrismaClient } from '@prisma/client';
 
 export async function verifyAndCreateUsername(args, prisma) {
@@ -39,4 +40,15 @@ export async function verifyAndCreateUsername(args, prisma) {
 
 export function userIsConversationParticipant(participants, userId) {
   return !!participants.find((participant) => participant.userId === userId);
+}
+
+export async function getServerSession(cookie) {
+  const res = await fetch('http://localhost:3000/api/auth/session', {
+    headers: {
+      cookie
+    }
+  });
+  const session = await res.json();
+  
+  return session;
 }

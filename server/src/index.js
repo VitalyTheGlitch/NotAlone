@@ -17,7 +17,9 @@ import cors from 'cors';
 import json from 'body-parser';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import { dirname as __dirname } from 'path';
+import path from 'path';
+
+const __dirname = path.resolve();
 
 const main = async () => {
   dotenv.config({ path: '.env.local' });
@@ -46,7 +48,7 @@ const main = async () => {
       else {
         cb(null, false);
 
-        return cb(new Error('Only PNG/JPG/JPEG/MP4 format allowed!'));
+        return cb(new Error('Only PNG / JPG / MP4 formats are allowed!'));
       }
   };
 
@@ -65,7 +67,7 @@ const main = async () => {
   // Create our WebSocket server using the HTTP server we just set up.
   const wsServer = new WebSocketServer({
     server: httpServer,
-    path: '/graphql/subscriptions'
+    path: '/subscription'
   });
 
   // Context parameters
@@ -156,9 +158,9 @@ const main = async () => {
     })
   );
 
-  app.use('/userfiles', express.static(__dirname + '\\..\\userfiles'));
+  app.use('/userfiles', express.static(path.join(__dirname, 'userfiles')));
 
-  app.use('/sounds', express.static(__dirname + '\\..\\sounds'));
+  app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
 
   app.post(
     '/upload',
