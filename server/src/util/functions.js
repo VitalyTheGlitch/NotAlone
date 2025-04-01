@@ -5,9 +5,6 @@ export async function verifyAndCreateUsername(args, prisma) {
   const { userId, username } = args;
 
   try {
-    /**
-     * Check if username taken by another user
-    **/
     const existingUser = await prisma.user.findUnique({
       where: {
         username
@@ -16,9 +13,6 @@ export async function verifyAndCreateUsername(args, prisma) {
 
     if (existingUser) return { error: 'Username already taken. Try another' };
 
-    /**
-     * Update username
-    **/
     await prisma.user.update({
       where: {
         id: userId
@@ -49,6 +43,6 @@ export async function getServerSession(cookie) {
     }
   });
   const session = await res.json();
-  
+
   return session;
 }

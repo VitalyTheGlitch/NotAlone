@@ -21,10 +21,12 @@ const typeDefs = gql`
       body: String
       attachment: String
     ): Boolean
+    deleteMessage(messageId: String!): Boolean
   }
 
   type Subscription {
     messageSent(conversationId: String): Message
+    messageDeleted(conversationId: String): Message
   }
 `;
 

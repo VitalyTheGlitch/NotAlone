@@ -12,13 +12,13 @@ const Home = () => {
 
   const reloadSession = () => {
     const event = new Event('visibilitychange');
-    
+
     document.dispatchEvent(event);
   };
 
   useEffect(() => {
     if (!session?.user && router.query.conversationId) router.replace(process.env.NEXT_PUBLIC_BASE_URL);
-  }, [session?.user, router.query]);
+  }, [session?.user, router]);
 
   return (
     <Box>

@@ -1,6 +1,6 @@
 import User from '@prisma/client';
 import { GraphQLError } from 'graphql';
-import { verifyAndCreateUsername } from '../../util/functions.js'; 
+import { verifyAndCreateUsername } from '../../util/functions.js';
 
 const resolvers = {
   Query: {

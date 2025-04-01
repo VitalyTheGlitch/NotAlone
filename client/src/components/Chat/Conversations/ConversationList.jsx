@@ -20,12 +20,9 @@ const ConversationList = ({
   const [editingConversation, setEditingConversation] = useState(null);
 
   const router = useRouter();
-  
+
   const { conversationId } = router.query;
 
-  /**
-   * Mutations
-  **/
   const [updateParticipants, { loading: updateParticipantsLoading }] = useMutation(ConversationOperations.Mutations.updateParticipants);
   const [deleteConversation] = useMutation(ConversationOperations.Mutations.deleteConversation);
 

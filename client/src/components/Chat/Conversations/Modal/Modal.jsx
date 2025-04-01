@@ -9,7 +9,7 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
-  Stack,
+  Stack
 } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
@@ -57,22 +57,15 @@ const ConversationModal = ({
 
     if (existing) {
       toast('Conversation already exists');
-      
+
       setExistingConversation(existing);
 
       return;
     }
 
-    /**
-     * Determine which function to call
-    **/
     editingConversation ? onUpdateConversation(editingConversation) : onCreateConversation();
   };
 
-  /**
-   * Verifies that a conversation with selected
-   * participants does not already exist
-  **/
   const findExistingConversation = (participantIds) => {
     let existingConversation = null;
 
@@ -95,9 +88,6 @@ const ConversationModal = ({
           break;
         }
 
-        /**
-         * If we hit here, all match
-        **/
         allMatchingParticipants = true;
       }
 
@@ -123,9 +113,6 @@ const ConversationModal = ({
 
       router.push({ query: { conversationId } });
 
-      /**
-       * Clear state and close modal on successful creation
-      **/
       setParticipants([]);
       setUsername('');
       onClose();
@@ -149,10 +136,6 @@ const ConversationModal = ({
 
       if (!data?.updateParticipants || errors) throw new Error('Failed to update participants');
 
-      /**
-       * Clear state and close modal
-       * on successful update
-      **/
       setParticipants([]);
       setUsername('');
       onClose();
@@ -187,11 +170,6 @@ const ConversationModal = ({
     onClose();
   };
 
-   /**
-    * If a conversation is being edited,
-    * update participant state to be that
-    * conversations' participants
-   **/
   useEffect(() => {
     if (editingConversation) {
       setParticipants(editingConversation.participants.map((p) => p.user));
@@ -199,17 +177,10 @@ const ConversationModal = ({
     }
   }, [editingConversation]);
 
-  /**
-   * Reset existing conversation state
-   * when participants added/removed
-  **/
   useEffect(() => {
     setExistingConversation(null);
   }, [participants]);
 
-  /**
-   * Clear participant state if closed
-  **/
   useEffect(() => {
     if (!isOpen) setParticipants([]);
   }, [isOpen]);

@@ -12,31 +12,10 @@ const resolvers = {
 
       try {
         const { id } = session.user;
-        /**
-         * Find all conversations that user is part of
-        **/
         const conversations = await prisma.conversation.findMany({
-          /**
-           * Below has been confirmed to be the correct
-           * query by the Prisma team. Has been confirmed
-           * that there is an issue on their end
-           * Issue seems specific to Mongo
-           **/
-          // where: {
-          //   participants: {
-          //     some: {
-          //       userId: {
-          //         equals: id,
-          //       },
-          //     },
-          //   },
-          // },
           include: conversationPopulated
         });
 
-        /**
-         * Since above query does not work
-        **/
         return conversations.filter(
           (conversation) => !!conversation.participants.find((p) => p.userId === id)
         );
@@ -45,7 +24,7 @@ const resolvers = {
 
         throw new GraphQLError(error?.message);
       }
-    },
+    }
   },
   Mutation: {
     createConversation: async function (_, args, context) {
@@ -57,9 +36,6 @@ const resolvers = {
       const { id: userId } = session.user;
 
       try {
-        /**
-         * Create Conversation entity
-        **/
         const conversation = await prisma.conversation.create({
           data: {
             participants: {
@@ -116,9 +92,15 @@ const resolvers = {
       if (!session?.user) throw new GraphQLError('Not authorized');
 
       try {
-        /**
-         * Delete conversation and all related entities
-        **/
+        await prisma.conversation.update({
+          where: {
+            id: conversationId
+          },
+          data: {
+            latestMessageId: null
+          }
+        });
+
         const [deletedConversation] = await prisma.$transaction([
           prisma.conversation.delete({
             where: {
@@ -232,16 +214,12 @@ const resolvers = {
 
         throw new GraphQLError(error?.message);
       }
-    },
+    }
   },
   Subscription: {
     conversationCreated: {
       subscribe: withFilter(
-        (_, __, context) => {
-          const { pubsub } = context;
-
-          return pubsub.asyncIterator(['CONVERSATION_CREATED']);
-        },
+        (_, __, context) => context.pubsub.asyncIterator(['CONVERSATION_CREATED']),
         (payload, _, context) => {
           const { session } = context;
 
@@ -252,15 +230,11 @@ const resolvers = {
 
           return userIsConversationParticipant(participants, userId);
         }
-      ),
+      )
     },
     conversationUpdated: {
       subscribe: withFilter(
-        (_, __, context) => {
-          const { pubsub } = context;
-
-          return pubsub.asyncIterator(['CONVERSATION_UPDATED']);
-        },
+        (_, __, context) => context.pubsub.asyncIterator(['CONVERSATION_UPDATED']),
         (payload, _, context) => {
           const { session } = context;
 
@@ -294,15 +268,11 @@ const resolvers = {
             userIsBeingRemoved
           );
         }
-      ),
+      )
     },
     conversationDeleted: {
       subscribe: withFilter(
-        (_, __, context) => {
-          const { pubsub } = context;
-
-          return pubsub.asyncIterator(['CONVERSATION_DELETED']);
-        },
+        (_, __, context) => context.pubsub.asyncIterator(['CONVERSATION_DELETED']),
         (payload, _, context) => {
           const { session } = context;
 

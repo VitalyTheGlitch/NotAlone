@@ -1,8 +1,8 @@
 import { useMutation } from '@apollo/client';
-import { Box, Input } from '@chakra-ui/react';
+import { Text, Box, Input, Textarea } from '@chakra-ui/react';
 import { ObjectID } from 'bson';
-import React, { useState, useEffect } from 'react';
-import { FaRegSmile, FaPaperclip, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { FaRegSmile, FaPaperclip, FaTimes, FaArrowRight } from 'react-icons/fa';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react';
 import axios from 'axios'
@@ -16,9 +16,15 @@ const MessageInput = ({ session, conversationId }) => {
 
   const [messageBody, setMessageBody] = useState('');
   const [uploadedFile, setUploadedFile] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const [isPickerVisible, setPickerVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [sendMessage] = useMutation(MessageOperations.Mutations.sendMessage);
+
+  const textAreaRef = useRef(null);
+  const dropZoneRef = useRef(null);
+  const debounceTimer = useRef(null);
 
   const send = async (attachmentFileName='') => {
     try {
@@ -28,22 +34,20 @@ const MessageInput = ({ session, conversationId }) => {
         id: newId,
         senderId,
         conversationId,
-        body: messageBody.replace(/  /g, ''),
+        body: messageBody.trim().replace(/  /g, ''),
         attachment: attachmentFileName
       };
       const { data, errors } = await sendMessage({
         variables: {
           ...newMessage
         },
-        /**
-         * Optimistically update UI
-        **/
         optimisticResponse: {
           sendMessage: true
         },
         update: (cache) => {
           setMessageBody('');
           setUploadedFile('');
+
           const existing = cache.readQuery({
             query: MessageOperations.Query.messages,
             variables: { conversationId }
@@ -57,7 +61,7 @@ const MessageInput = ({ session, conversationId }) => {
               messages: [
                 {
                   id: newId,
-                  body: messageBody.replace(/  /g, ''),
+                  body: messageBody.trim().replace(/  /g, ''),
                   attachment: attachmentFileName,
                   senderId: session.user.id,
                   conversationId,
@@ -84,10 +88,10 @@ const MessageInput = ({ session, conversationId }) => {
     }
   }
 
-  const onSendMessage = async (event) => {
+  const onSendMessage = (event) => {
     event.preventDefault();
 
-    if (!(messageBody.replace(/ /g, '') || uploadedFile)) return;
+    if (!(messageBody.trim().replace(/ /g, '') || uploadedFile)) return;
 
     if (uploadedFile) {
       const loading = toast.loading('Uploading file...');
@@ -110,7 +114,7 @@ const MessageInput = ({ session, conversationId }) => {
         send(res.data);
       }).catch(err => {
         console.log(err);
-        
+
         toast.remove(loading);
         toast.error(err.response.data.message);
       });
@@ -118,6 +122,79 @@ const MessageInput = ({ session, conversationId }) => {
 
     else send();
   };
+
+  const onKeyDown = useCallback((event) => {
+    if (event.key == 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+
+      if (!isMobile) onSendMessage(event);
+
+      else {
+        const textarea = textAreaRef.current;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        setMessageBody(prev =>
+          prev.substring(0, start) +
+          '\n' +
+          prev.substring(end)
+        );
+
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+        }, 0);
+      }
+    }
+  }, [isMobile, onSendMessage]);
+
+  const onDragEnter = useCallback((event) => {
+    e.preventDefault();
+
+    if (e.dataTransfer.items?.length) {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+      setIsDragging(true);
+    }
+  }, [debounceTimer]);
+
+  const onDragLeave = useCallback((event) => {
+    e.preventDefault();
+
+    debounceTimer.current = setTimeout(() => {
+      setIsDragging(false);
+    }, 100);
+  }, [debounceTimer]);
+
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const onDrop = useCallback((event) => {
+    event.preventDefault();
+
+    setIsDragging(false);
+
+    const files = event.dataTransfer.files;
+
+    if (files.length) setUploadedFile(files[0]);
+  }, []);
+
+  const onPaste = useCallback((event) => {
+    const items = event.clipboardData.items;
+
+    for (const item of items) {
+      if (item.kind === 'file') {
+        event.preventDefault();
+
+        const file = item.getAsFile();
+
+        setUploadedFile(file);
+
+        break;
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const pickerStyle = document.createElement('style');
@@ -140,8 +217,60 @@ const MessageInput = ({ session, conversationId }) => {
     `;
   }, []);
 
+  useEffect(() => {
+    if (textAreaRef.current) {
+      textAreaRef.current.style.height = 'auto';
+      textAreaRef.current.style.height = textAreaRef.current.scrollHeight + 'px';
+    }
+  }, [messageBody]);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+      setIsMobile(isMobile);
+    };
+
+    checkMobile();
+
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
-    <Box px={4} py={6} width='100%'>
+    <Box
+      style={{
+        border: isDragging ? '2px dashed #fff' : 'none',
+        borderRadius: '8px'
+      }}
+      px={4}
+      py={6}
+      width='100%'
+      ref={dropZoneRef}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      {isDragging && (
+        <Box
+          display='flex'
+          position='absolute'
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg='rgba(0,0,0,0.5)'
+          justifyContent='center'
+          alignItems='center'
+          zIndex={1}
+        >
+          <Text fontSize='xl' color='#fff'>
+            Drop the file to upload
+          </Text>
+        </Box>
+      )}
       <form encType='multipart/form-data' onSubmit={onSendMessage}>
         <div style={{
             display: 'flex',
@@ -173,7 +302,7 @@ const MessageInput = ({ session, conversationId }) => {
             <div style={{
                 position: 'absolute',
                 bottom: '50px',
-                left: '25px',
+                left: '25px'
               }}
             >
               <Picker
@@ -188,29 +317,36 @@ const MessageInput = ({ session, conversationId }) => {
             color={isPickerVisible ? '#ff174d' : 'white'}
             onClick={() => setPickerVisible(v => !v)}
           />
-          <Input
+          <Textarea
+            ref={textAreaRef}
             value={messageBody}
             onChange={(event) => setMessageBody(event.target.value)}
+            onPaste={onPaste}
+            onKeyDown={onKeyDown}
+            flex='1'
             width='95%'
             size='md'
-            paddingBottom='2px'
+            paddingBottom='10px'
+            lineHeight='1.5'
             placeholder='Message'
             color='whiteAlpha.900'
             resize='none'
             maxLength='2048'
+            overflow='hidden'
+            rows={1}
             _focus={{
               boxShadow: 'none',
               border: '1px solid',
-              borderColor: 'whiteAlpha.300',
+              borderColor: 'whiteAlpha.300'
             }}
             _hover={{
-              borderColor: 'whiteAlpha.300',
+              borderColor: 'whiteAlpha.300'
             }}
           />
           <label>
             <FaPaperclip
-                cursor='pointer'
-                color='white'
+              color='white'
+              cursor='pointer'
             />
             <Input
               type='file'
@@ -219,6 +355,18 @@ const MessageInput = ({ session, conversationId }) => {
               display='none'
             />
           </label>
+          <button
+            type='submit'
+            style={{
+              display: 'flex',
+              background: 'none',
+              border: 'none',
+              alignItems: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <FaArrowRight color='white' />
+          </button>
         </div>
       </form>
     </Box>

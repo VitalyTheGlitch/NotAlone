@@ -6,12 +6,12 @@ import {
   MenuItem,
   MenuList,
   Stack,
-  Text,
+  Text
 } from '@chakra-ui/react';
 import { formatRelative } from 'date-fns';
 import enUS from 'date-fns/locale/en-US';
 import React, { useState } from 'react';
-import { GoPrimitiveDot } from 'react-icons/go';
+import { FaCircle  } from 'react-icons/fa';
 import { MdDeleteOutline } from 'react-icons/md';
 import { BiLogOut } from 'react-icons/bi';
 import { AiOutlineEdit } from 'react-icons/ai';
@@ -19,7 +19,7 @@ import { formatUsernames, formatImages } from '../../../util/functions';
 
 const formatRelativeLocale = {
   lastWeek: 'eeee',
-  yesterday: '\'Yesterday',
+  yesterday: '\'Yesterday\'',
   today: 'p',
   other: 'MM/dd/yy'
 };
@@ -38,7 +38,7 @@ const ConversationItem = ({
 
   const handleClick = (event) => {
     if (event.type === 'click') onClick();
-    
+
     else if (event.type === 'contextmenu') {
       event.preventDefault();
 
@@ -72,6 +72,7 @@ const ConversationItem = ({
               icon={<AiOutlineEdit fontSize={20} />}
               onClick={(event) => {
                 event.stopPropagation();
+
                 onEditConversation();
               }}
             >
@@ -83,6 +84,7 @@ const ConversationItem = ({
                 icon={<BiLogOut fontSize={20} />}
                 onClick={(event) => {
                   event.stopPropagation();
+
                   onLeaveConversation(conversation);
                 }}
               >
@@ -94,6 +96,7 @@ const ConversationItem = ({
                 icon={<MdDeleteOutline fontSize={20} />}
                 onClick={(event) => {
                   event.stopPropagation();
+
                   onDeleteConversation(conversation.id);
                 }}
               >
@@ -103,11 +106,6 @@ const ConversationItem = ({
           </MenuList>
         </Menu>
       )}
-      <Flex position='absolute' left='-6px'>
-        {hasSeenLatestMessage === false && (
-          <GoPrimitiveDot fontSize={18} color='brand.100' />
-        )}
-      </Flex>
       <Avatar src={formatImages(conversation.participants, userId)} />
       <Flex justify='space-between' width='80%' height='100%'>
         <Flex direction='column' width='70%' height='100%'>
@@ -132,15 +130,22 @@ const ConversationItem = ({
             </Box>
           )}
         </Flex>
-        <Text color='whiteAlpha.700' textAlign='right'>
-          {formatRelative(conversation.updatedAt, new Date(), {
-            locale: {
-              ...enUS,
-              formatRelative: (token) =>
-                formatRelativeLocale[token]
-            }
-          })}
-        </Text>
+        <Stack spacing={0} align='flex-end'>
+          <Text color='whiteAlpha.700' textAlign='right'>
+            {formatRelative(conversation.updatedAt, new Date(), {
+              locale: {
+                ...enUS,
+                formatRelative: (token) => formatRelativeLocale[token]
+              }
+            })}
+          </Text>
+
+          {hasSeenLatestMessage === false && (
+            <Box mt={1}>
+              <FaCircle fontSize={12} color='white' />
+            </Box>
+          )}
+        </Stack>
       </Flex>
     </Stack>
   );

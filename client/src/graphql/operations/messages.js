@@ -39,12 +39,24 @@ export default {
           attachment: $attachment
         )
       }
+    `,
+    deleteMessage: gql`
+      mutation DeleteMessage($messageId: String!) {
+        deleteMessage(messageId: $messageId)
+      }
     `
   },
   Subscriptions: {
     messageSent: gql`
       subscription MessageSent($conversationId: String!) {
         messageSent(conversationId: $conversationId) {
+          ${MessageFields}
+        }
+      }
+    `,
+    messageDeleted: gql`
+      subscription MessageDeleted($conversationId: String!) {
+        messageDeleted(conversationId: $conversationId) {
           ${MessageFields}
         }
       }

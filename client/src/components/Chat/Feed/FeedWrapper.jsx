@@ -34,7 +34,17 @@ const FeedWrapper = ({ session }) => {
               conversationId={conversationId}
             />
           </Flex>
-          <MessageInput session={session} conversationId={conversationId} />
+          <Box
+            position='sticky'
+            bottom={0}
+            bg='whiteAlpha.50'
+            backdropFilter='blur(10px)'
+            borderTop='1px solid'
+            borderColor='whiteAlpha.200'
+            boxShadow='0 -5px 15px rgba(0,0,0,0.3)'
+          >
+            <MessageInput session={session} conversationId={conversationId} />
+          </Box>
         </>
       ) : (
         <NoConversationSelected />

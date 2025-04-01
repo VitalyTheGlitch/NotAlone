@@ -11,16 +11,13 @@ import ConversationList from './ConversationList';
 
 const ConversationsWrapper = ({ session }) => {
   const router = useRouter();
-  
+
   const { conversationId } = router.query;
 
   const { user: { id: userId } } = session;
 
   const [notification] = new useSound('http://localhost:4000/sounds/notify.mp3');
 
-  /**
-   * Queries
-  **/
   const {
     data: conversationsData,
     loading: conversationsLoading,
@@ -35,14 +32,8 @@ const ConversationsWrapper = ({ session }) => {
     }
   );
 
-  /**
-   * Mutations
-  **/
   const [markConversationAsRead] = useMutation(ConversationOperations.Mutations.markConversationAsRead);
 
-  /**
-   * Subscriptions
-  **/
   useSubscription(
     ConversationOperations.Subscriptions.conversationUpdated,
     {
@@ -61,11 +52,8 @@ const ConversationsWrapper = ({ session }) => {
 
         const { id: updatedConversationId, latestMessage } = updatedConversation;
 
-        (latestMessage.sender.id != userId) && (conversationId != updatedConversationId) && notification();
+        (latestMessage?.sender?.id !==  userId) && (conversationId !== updatedConversationId) && notification();
 
-        /**
-         * Check if user is being removed
-        **/
         if (removedUserIds && removedUserIds.length) {
           const isBeingRemoved = removedUserIds.find((id) => id === userId);
 
@@ -91,16 +79,10 @@ const ConversationsWrapper = ({ session }) => {
               );
             }
 
-            /**
-             * Early return - no more updates required
-            **/
             return;
           }
         }
 
-        /**
-         * Check if user is being added to conversation
-        **/
         if (addedUserIds && addedUserIds.length) {
           const isBeingAdded = addedUserIds.find((id) => id === userId);
 
@@ -123,15 +105,9 @@ const ConversationsWrapper = ({ session }) => {
           }
         }
 
-        /**
-         * Already viewing conversation where
-         * new message is received; no need
-         * to manually update cache due to
-         * message subscription
-        **/
         if (updatedConversationId === conversationId) {
           onViewConversation(conversationId, false);
-          
+
           return;
         }
 
@@ -142,19 +118,10 @@ const ConversationsWrapper = ({ session }) => {
 
         if (!existing) return;
 
-        /**
-         * Check if lastest message is already present
-         * in the message query
-        **/
         const hasLatestMessage = existing.messages.find(
           (m) => m.id === latestMessage.id
         );
 
-        /**
-         * Update query as re-fetch won't happen if you
-         * view a conversation you've already viewed due
-         * to caching
-        **/
         if (!hasLatestMessage) {
           client.writeQuery({
             query: MessageOperations.Query.messages,
@@ -201,9 +168,6 @@ const ConversationsWrapper = ({ session }) => {
   const onViewConversation = async (conversationId, hasSeenLatestMessage) => {
     router.push({ query: { conversationId } });
 
-    /**
-     * Only mark as read if conversation is unread
-    **/
     if (hasSeenLatestMessage) return;
 
     try {
@@ -216,9 +180,6 @@ const ConversationsWrapper = ({ session }) => {
           markConversationAsRead: true
         },
         update: (cache) => {
-          /**
-           * Get conversation participants from cache
-          **/
           const participantsFragment = cache.readFragment({
             id: `Conversation:${conversationId}`,
             fragment: gql`
@@ -237,33 +198,21 @@ const ConversationsWrapper = ({ session }) => {
 
           if (!participantsFragment) return;
 
-          /**
-           * Create copy to allow mutation
-          **/
           const participants = [...participantsFragment.participants];
 
           const userParticipantIdx = participants.findIndex(
             (p) => p.user.id === userId
           );
 
-          /**
-           * Should always be found but just in case
-          **/
           if (userParticipantIdx === -1) return;
 
           const userParticipant = participants[userParticipantIdx];
 
-          /**
-           * Update user to show latest message as read
-          **/
           participants[userParticipantIdx] = {
             ...userParticipant,
             hasSeenLatestMessage: true
           };
 
-          /**
-           * Update cache
-          **/
           cache.writeFragment({
             id: `Conversation:${conversationId}`,
             fragment: gql`
@@ -297,9 +246,6 @@ const ConversationsWrapper = ({ session }) => {
     });
   };
 
-  /**
-   * Execute subscription on mount
-  **/
   useEffect(() => {
     subscribeToNewConversations();
   }, []);

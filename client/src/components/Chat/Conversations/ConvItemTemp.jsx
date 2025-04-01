@@ -19,7 +19,7 @@ import { formatUsernames } from '../../../util/functions';
 
 const formatRelativeLocale = {
   lastWeek: 'eeee',
-  yesterday: '\'Yesterday',
+  yesterday: '\'Yesterday\'',
   today: 'p',
   other: 'MM/dd/yy'
 };

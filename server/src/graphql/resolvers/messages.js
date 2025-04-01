@@ -14,9 +14,6 @@ const resolvers = {
 
       const { user: { id: userId } } = session;
 
-      /**
-       * Verify that user is a participant
-      **/
       const conversation = await prisma.conversation.findUnique({
         where: {
           id: conversationId
@@ -24,14 +21,14 @@ const resolvers = {
         include: conversationPopulated
       });
 
-      if (!conversation) throw new GraphQLError('Conversation Not Found');
+      if (!conversation) throw new GraphQLError('Conversation not found');
 
       const allowedToView = userIsConversationParticipant(
         conversation.participants,
         userId
       );
 
-      if (!allowedToView) throw new Error('Not Authorized');
+      if (!allowedToView) throw new Error('Not authorized');
 
       try {
         const messages = await prisma.message.findMany({
@@ -61,24 +58,20 @@ const resolvers = {
       const { id: userId } = session.user;
       const { id: messageId, senderId, conversationId, body, attachment } = args;
 
+      if (!body.trim() && !attachment) throw new GraphQLError('Message cannot be empty!')
+
       try {
-        /**
-         * Create new message entity
-        **/
         const newMessage = await prisma.message.create({
           data: {
             id: messageId,
             senderId,
             conversationId,
-            body,
+            body: body.trim(),
             attachment
           },
           include: messagePopulated
         });
 
-        /**
-         * Could cache this in production
-        **/
         const participant = await prisma.conversationParticipant.findFirst({
           where: {
             userId,
@@ -86,16 +79,10 @@ const resolvers = {
           }
         });
 
-        /**
-         * Should always exist
-        **/
         if (!participant) throw new GraphQLError('Participant does not exist');
 
         const { id: participantId } = participant;
 
-        /**
-         * Update conversation latestMessage
-        **/
         const conversation = await prisma.conversation.update({
           where: {
             id: conversationId
@@ -136,25 +123,90 @@ const resolvers = {
         return true;
       } catch (error) {
         console.log('sendMessage error', error);
-        
+
         throw new GraphQLError('Error sending message');
       }
     },
+    deleteMessage: async function (_, args, context) {
+      const { session, prisma, pubsub } = context;
+      const { messageId } = args;
+
+      if (!session?.user) throw new GraphQLError('Not authorized');
+
+      try {
+  return await prisma.$transaction(async (tx) => {
+          const message = await tx.message.findUnique({
+            where: { id: messageId },
+            include: {
+              conversation: {
+                include: conversationPopulated
+              }
+            }
+          });
+
+          if (!message) throw new GraphQLError('Message not found');
+
+          if (message.senderId != session.user.id) throw new GraphQLError('Not authorized');
+
+          const isLatestMessage = message.conversation.latestMessageId === messageId;
+
+          let updatedConversation = message.conversation;
+
+          if (isLatestMessage) {
+            const [previousMessage] = await tx.message.findMany({
+              where: {
+                conversationId: message.conversationId,
+                id: { not: messageId }
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+            });
+
+            updatedConversation = await tx.conversation.update({
+              where: { id: message.conversationId },
+              data: {
+                latestMessageId: previousMessage?.id || null,
+                updatedAt: new Date()
+              },
+              include: conversationPopulated
+            });
+          }
+
+          const deletedMessage = await tx.message.delete({
+            where: { id: messageId },
+            include: messagePopulated
+          });
+
+          pubsub.publish('MESSAGE_DELETED', { messageDeleted: deletedMessage });
+          pubsub.publish('CONVERSATION_UPDATED', {
+            conversationUpdated: {
+              conversation: updatedConversation
+            }
+          });
+
+          return true;
+  });
+      } catch (error) {
+        console.log('deleteMessage error', error);
+
+        throw new GraphQLError('Error deleting message');
+      }
+    }
   },
   Subscription: {
     messageSent: {
       subscribe: withFilter(
-        (_, __, context) => {
-          const { pubsub } = context;
-
-          return pubsub.asyncIterator(['MESSAGE_SENT']);
-        },
-        (payload, args, context) => {
-          return payload.messageSent.conversationId === args.conversationId;
-        }
-      ),
+        (_, __, context) => context.pubsub.asyncIterator(['MESSAGE_SENT']),
+        (payload, args, context) => payload.messageSent.conversationId === args.conversationId
+      )
     },
-  },
+    messageDeleted: {
+      subscribe: withFilter(
+        (_, __, context) => context.pubsub.asyncIterator(['MESSAGE_DELETED']),
+        (payload, args) => payload.messageDeleted.conversationId === args.conversationId
+      )
+    }
+  }
 };
 
 export const messagePopulated = Prisma.validator()({

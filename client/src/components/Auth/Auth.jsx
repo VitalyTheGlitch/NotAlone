@@ -32,9 +32,6 @@ const Auth = ({ session, reloadSession }) => {
 
       toast.success('Account successfully created');
 
-      /**
-       * Reload session to obtain new username
-      **/
       reloadSession();
     } catch (error) {
       toast.error('There was an error');
