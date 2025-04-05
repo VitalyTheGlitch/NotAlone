@@ -1,0 +1,20 @@
+{
+  "short_name": "Not Alone",
+  "name": "Not Alone",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1f1424",
+  "background_color": "#1f1424"
+}
